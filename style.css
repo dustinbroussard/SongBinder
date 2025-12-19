@@ -1718,7 +1718,7 @@ img, video, iframe {
 /* If you ever want to tweak even further on the tiniest phones */
 @media (max-width: 500px) {
   .main-logo-img {
-      max-height: 38px;
+      max-height: 50px;
   }
 }
 
@@ -1882,9 +1882,9 @@ html, body {
   margin-right: 4rem;
 }
 /* Logo image default sizing (desktop) */
-.app-logo-img { max-height: 110px; height: auto; width: auto; display: block; }
+.app-logo-img { max-height: 140px; height: auto; width: auto; display: block; }
 @media (max-width: 700px) { .app-logo-img { max-height: 55px; } }
-@media (max-width: 500px) { .app-logo-img { max-height: 38px; } }
+@media (max-width: 500px) { .app-logo-img { max-height: 50px; } }
 @media (max-width: 500px) {
   .app-logo {
     width: 90%;
