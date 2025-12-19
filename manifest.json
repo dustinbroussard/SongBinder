@@ -1,6 +1,6 @@
 {
-    "name": "Hill Rd. Song Manager",
-    "short_name": "Hill Rd. Song Mgr",
+    "name": "SongBinder",
+    "short_name": "SongBinder",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#000000",

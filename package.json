@@ -1,5 +1,5 @@
 {
-  "name": "hill-rd-setlist",
+  "name": "songbinder",
   "version": "1.0.0",
   "description": "A **modern, touch-friendly app** for musicians to manage setlists and lyrics with zero clutter and maximum clarity. Built for band rehearsals, gigging, and performance mode.",
   "main": "script.js",

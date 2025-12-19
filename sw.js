@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hill-rd-setlist-manager-v10';
+const CACHE_NAME = 'songbinder-manager-v10';
 const ABSOLUTE_URL = /^https?:\/\//i;
 const BASE_PATH = (() => {
   try {

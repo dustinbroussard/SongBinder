@@ -1,4 +1,4 @@
-# Hill Rd. Song Manager — Codebase Audit (v2)
+# SongBinder — Codebase Audit (v2)
 
 Date: 2025-11-05
 
@@ -52,7 +52,7 @@ Overall architecture is solid and offline‑first. Key risks centered on XSS via
 - Explore focus trapping and Escape‑to‑close for modals for full WCAG parity.
 
 ---
-# Hill Rd. Song Manager — Codebase Audit (v1)
+# SongBinder — Codebase Audit (v1)
 
 Date: 2025-10-31
 
