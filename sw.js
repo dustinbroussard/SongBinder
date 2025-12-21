@@ -1,4 +1,4 @@
-const CACHE_NAME = 'songbinder-manager-v10';
+const CACHE_NAME = 'songbinder-manager-v11';
 const ABSOLUTE_URL = /^https?:\/\//i;
 const BASE_PATH = (() => {
   try {
@@ -42,7 +42,8 @@ const rawCachePaths = [
     '/performance/performance.css',
     '/assets/icons/icon-192x192.png',
     '/assets/icons/icon-512x512.png',
-    '/assets/images/mylogo.png',
+    '/assets/images/logo-dark.png',
+    '/assets/images/logo-light.png',
     '/lib/mammoth.browser.min.js',
     '/lib/sortable.min.js',
     '/lib/fontawesome/css/all.min.css',

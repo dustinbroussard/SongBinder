@@ -1,5 +1,21 @@
 /* global idb, Fuse, Sortable, mammoth */
 // ==== THEME HANDLING ====
+function updateLogoForTheme(theme) {
+    const nextSrc = theme === 'light' ? 'logoLight' : 'logoDark';
+    document.querySelectorAll('img[data-logo-light][data-logo-dark]').forEach((logo) => {
+        const src = logo.dataset[nextSrc];
+        if (src) {
+            logo.setAttribute('src', src);
+        }
+    });
+}
+
+function applyTheme(theme) {
+    const nextTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = nextTheme;
+    updateLogoForTheme(nextTheme);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme with strict dark/light only
     let savedTheme = localStorage.getItem('theme');
@@ -7,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         savedTheme = 'dark';
         localStorage.setItem('theme', 'dark');
     }
-    document.documentElement.dataset.theme = savedTheme;
+    applyTheme(savedTheme);
 });
 
 async function ensurePersistentStorage() {
@@ -1098,7 +1114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData() {
             this.songs = safeJSONParse(localStorage.getItem('songs'), []);
             const theme = (localStorage.getItem('theme') === 'light') ? 'light' : 'dark';
-            document.documentElement.dataset.theme = theme;
+            applyTheme(theme);
         },
 
         async saveData() {
@@ -1253,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
                 const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
                 const next = current === 'dark' ? 'light' : 'dark';
-                document.documentElement.dataset.theme = next;
+                applyTheme(next);
                 localStorage.setItem('theme', next);
             });
 
