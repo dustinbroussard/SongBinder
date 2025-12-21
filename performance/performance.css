@@ -272,6 +272,11 @@
     transition: background 0.22s, opacity 0.14s, color 0.14s;
 }
 
+#performance-mode ~ .scroll-to-top-btn,
+#performance-mode ~ .auto-scroll-btn {
+    display: flex !important;
+}
+
 .auto-scroll-btn.disabled {
     opacity: 0.5;
     cursor: default;
@@ -529,4 +534,3 @@
 .auto-scroll-btn {
     display: flex !important;
 }
-
