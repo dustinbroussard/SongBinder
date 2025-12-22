@@ -1085,11 +1085,35 @@ function enforceAlternating(lines) {
                         .replace(stopPhrases, '')
                         .trim();
 
-                    const appendToTarget = (text) => {
-                        if (!this._dictationTarget) return;
+                    this._dictationInterim = '';
+                    const clearInterim = () => {
+                        if (!this._dictationTarget || !this._dictationInterim) return;
                         const current = this._dictationTarget.textContent || '';
-                        const toAdd = (current && !/\s$/.test(current)) ? ' ' + text : text;
-                        this._dictationTarget.textContent = (current + toAdd).replace(/\s+/g, ' ');
+                        if (current.endsWith(this._dictationInterim)) {
+                            const base = current.slice(0, -this._dictationInterim.length).replace(/\s+$/, '');
+                            this._dictationTarget.textContent = base;
+                        }
+                        this._dictationInterim = '';
+                    };
+
+                    const appendToTarget = (text, { isFinal = false } = {}) => {
+                        if (!this._dictationTarget) return;
+                        if (!text) {
+                            if (isFinal) clearInterim();
+                            return;
+                        }
+                        const current = this._dictationTarget.textContent || '';
+                        const withoutInterim = this._dictationInterim && current.endsWith(this._dictationInterim)
+                            ? current.slice(0, -this._dictationInterim.length).replace(/\s+$/, '')
+                            : current;
+                        const spacing = (withoutInterim && !/\s$/.test(withoutInterim)) ? ' ' : '';
+                        const nextText = (withoutInterim + spacing + text).replace(/\s+/g, ' ');
+                        this._dictationTarget.textContent = nextText;
+                        if (isFinal) {
+                            this._dictationInterim = '';
+                        } else {
+                            this._dictationInterim = (spacing + text).replace(/\s+/g, ' ');
+                        }
                         this.hasUnsavedChanges = true;
                         this.debouncedSaveCurrentSong && this.debouncedSaveCurrentSong();
                     };
@@ -1105,23 +1129,26 @@ function enforceAlternating(lines) {
                         // Handle control phrases (only on final to avoid jitter)
                         if (finalChunk) {
                             if (stopPhrases.test(finalChunk)) {
+                                clearInterim();
                                 try { this._recognizer && this._recognizer.stop(); } catch {}
                                 ClipboardManager.showToast('Dictation stopped', 'info');
                                 return; // Do not append stop phrase text
                             }
                             if (nextPhrases.test(finalChunk)) {
+                                clearInterim();
                                 gotoNextLine();
                             } else if (prevPhrases.test(finalChunk)) {
+                                clearInterim();
                                 gotoPrevLine();
                             }
                             finalChunk = stripControls(finalChunk);
                         }
                         // Append interim (without controls) to show live text
-                        if (interim) appendToTarget(stripControls(interim));
-                        if (finalChunk) appendToTarget(finalChunk);
+                        if (interim) appendToTarget(stripControls(interim), { isFinal: false });
+                        if (finalChunk) appendToTarget(finalChunk, { isFinal: true });
                     };
                     rec.onerror = (e) => { ClipboardManager.showToast(`Voice error: ${e.error || e.message}`, 'error'); };
-                    rec.onend = () => { this.voiceDictationBtn.classList.remove('mic-listening'); this._dictationActive = false; };
+                    rec.onend = () => { this.voiceDictationBtn.classList.remove('mic-listening'); this._dictationActive = false; this._dictationInterim = ''; };
                     rec.onstart = () => { this._dictationActive = true; };
                     rec.start();
                 } catch (err) {
