@@ -115,7 +115,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!db.objectStoreNames.contains('setlists')){ const sl=db.createObjectStore('setlists',{keyPath:'id'}); if(sl.createIndex) sl.createIndex('name','name',{unique:false}); }
         if(!db.objectStoreNames.contains('meta')){ db.createObjectStore('meta'); }
       };
-      async function open(){ if(_db) return _db; _db = await idb.openDB(DB_NAME, DB_VERSION, { upgrade(db){ upgradeSchema(db); } }); if(!hasRequiredStores(_db)){ try{ _db.close(); await idb.deleteDB(DB_NAME); _db = await idb.openDB(DB_NAME, DB_VERSION, { upgrade: upgradeSchema }); _dbWasReset = true; } catch(_){} } return _db; }
+      async function backupExistingData(db){
+        const backup = { songs: [], setlists: [] };
+        try{
+          const storeNames = Array.from(db.objectStoreNames);
+          if (storeNames.includes('songs')) backup.songs = await db.getAll('songs');
+          if (storeNames.includes('setlists')) backup.setlists = await db.getAll('setlists');
+        }catch(e){
+          console.warn('Failed to backup data before DB reset', e);
+        }
+        return backup;
+      }
+      async function restoreBackup(db, backup){
+        if (!backup) return;
+        try{
+          if (Array.isArray(backup.songs) && backup.songs.length){
+            const tx = db.transaction('songs', 'readwrite');
+            for (const song of backup.songs) await tx.store.put(song);
+            await tx.done;
+          }
+        }catch(e){
+          console.warn('Failed to restore songs after DB reset', e);
+        }
+        try{
+          if (Array.isArray(backup.setlists) && backup.setlists.length){
+            const tx = db.transaction('setlists', 'readwrite');
+            for (const setlist of backup.setlists) await tx.store.put(setlist);
+            await tx.done;
+          }
+        }catch(e){
+          console.warn('Failed to restore setlists after DB reset', e);
+        }
+      }
+      async function open(){
+        if(_db) return _db;
+        _db = await idb.openDB(DB_NAME, DB_VERSION, { upgrade(db){ upgradeSchema(db); } });
+        if(!hasRequiredStores(_db)){
+          const backup = await backupExistingData(_db);
+          try{
+            _db.close();
+            await idb.deleteDB(DB_NAME);
+            _db = await idb.openDB(DB_NAME, DB_VERSION, { upgrade: upgradeSchema });
+            _dbWasReset = true;
+          }catch(_){}
+          try{
+            await restoreBackup(_db, backup);
+          }catch(e){
+            console.warn('Failed to restore DB backup', e);
+          }
+        }
+        return _db;
+      }
       return {
         async getAllSongs(){ const db=await open(); return db.getAll('songs'); },
         async getAllSetlists(){ const db=await open(); return db.getAll('setlists'); },
