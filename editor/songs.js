@@ -326,6 +326,143 @@ async function exportAllSongs(filename = 'lyricsmith_songs.json') {
     document.body.removeChild(link);
 }
 
+async function exportAllSongsAsSeparateTxtZip(filename = 'lyricsmith_songs_txt.zip') {
+    let all = [];
+    try { all = await (window.EditorDB?.getAllSongs?.() || []); } catch {}
+    if (!all.length) {
+        try { ClipboardManager.showToast('No songs to export.', 'info'); } catch {}
+        return;
+    }
+    const sanitizeFilename = (name) => {
+        const base = String(name || 'Untitled')
+            .replace(/[\\/:*?"<>|]+/g, '')
+            .trim()
+            .replace(/\s+/g, '_');
+        return base.slice(0, 80) || 'song';
+    };
+    const ensureUnique = (base, used) => {
+        let name = base;
+        let n = 1;
+        while (used.has(name)) { n += 1; name = `${base}_${n}`; }
+        used.add(name);
+        return name;
+    };
+    const usedNames = new Set();
+    const encoder = new TextEncoder();
+    const files = all.map((song) => {
+        const title = song?.title || 'Untitled';
+        const base = sanitizeFilename(title);
+        const unique = ensureUnique(base, usedNames);
+        const content = ClipboardManager.formatSongForExport(song, true);
+        return { name: `${unique}.txt`, bytes: encoder.encode(content) };
+    });
+    const blob = buildZipFromFiles(files);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Minimal ZIP builder (store mode, no compression)
+function buildZipFromFiles(files) {
+    const makeUint8 = (len) => new Uint8Array(len);
+    const writeU16 = (arr, off, val) => { arr[off] = val & 0xff; arr[off + 1] = (val >>> 8) & 0xff; };
+    const writeU32 = (arr, off, val) => {
+        arr[off] = val & 0xff;
+        arr[off + 1] = (val >>> 8) & 0xff;
+        arr[off + 2] = (val >>> 16) & 0xff;
+        arr[off + 3] = (val >>> 24) & 0xff;
+    };
+    const dosDateTime = (d) => {
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        const hours = d.getHours();
+        const minutes = d.getMinutes();
+        const seconds = Math.floor(d.getSeconds() / 2);
+        const dt = ((year - 1980) << 9) | (month << 5) | day;
+        const tm = (hours << 11) | (minutes << 5) | seconds;
+        return { dt, tm };
+    };
+    const crcTable = (() => {
+        const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+            let c = n;
+            for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+            table[n] = c >>> 0;
+        }
+        return table;
+    })();
+    const crc32 = (bytes) => {
+        let c = 0xffffffff;
+        for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+        return (c ^ 0xffffffff) >>> 0;
+    };
+
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    const now = new Date();
+    const { dt, tm } = dosDateTime(now);
+    for (const f of files) {
+        const nameBytes = new TextEncoder().encode(f.name);
+        const data = f.bytes instanceof Uint8Array ? f.bytes : new Uint8Array(f.bytes);
+        const crc = crc32(data);
+        const lf = makeUint8(30 + nameBytes.length);
+        writeU32(lf, 0, 0x04034b50);
+        writeU16(lf, 4, 20);
+        writeU16(lf, 6, 0);
+        writeU16(lf, 8, 0);
+        writeU16(lf, 10, tm);
+        writeU16(lf, 12, dt);
+        writeU32(lf, 14, crc);
+        writeU32(lf, 18, data.length);
+        writeU32(lf, 22, data.length);
+        writeU16(lf, 26, nameBytes.length);
+        writeU16(lf, 28, 0);
+        lf.set(nameBytes, 30);
+        parts.push(lf, data);
+        const localOffset = offset;
+        offset += lf.length + data.length;
+        const cf = makeUint8(46 + nameBytes.length);
+        writeU32(cf, 0, 0x02014b50);
+        writeU16(cf, 4, 20);
+        writeU16(cf, 6, 20);
+        writeU16(cf, 8, 0);
+        writeU16(cf, 10, 0);
+        writeU16(cf, 12, tm);
+        writeU16(cf, 14, dt);
+        writeU32(cf, 16, crc);
+        writeU32(cf, 20, data.length);
+        writeU32(cf, 24, data.length);
+        writeU16(cf, 28, nameBytes.length);
+        writeU16(cf, 30, 0);
+        writeU16(cf, 32, 0);
+        writeU16(cf, 34, 0);
+        writeU16(cf, 36, 0);
+        writeU32(cf, 38, 0);
+        writeU32(cf, 42, localOffset);
+        cf.set(nameBytes, 46);
+        central.push(cf);
+    }
+    const centralStart = offset;
+    for (const c of central) { parts.push(c); offset += c.length; }
+    const centralSize = offset - centralStart;
+    const eocd = makeUint8(22);
+    writeU32(eocd, 0, 0x06054b50);
+    writeU16(eocd, 4, 0);
+    writeU16(eocd, 6, 0);
+    writeU16(eocd, 8, files.length);
+    writeU16(eocd, 10, files.length);
+    writeU32(eocd, 12, centralSize);
+    writeU32(eocd, 16, centralStart);
+    writeU16(eocd, 20, 0);
+    parts.push(eocd);
+    return new Blob(parts, { type: 'application/zip' });
+}
+
 
 async function importSongs(file) {
     try {

@@ -1323,6 +1323,17 @@ function enforceAlternating(lines) {
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+                    e.preventDefault();
+                    const format = prompt('Export library format? Enter "json" or "txt-zip"', 'json');
+                    if (!format) return;
+                    const choice = format.trim().toLowerCase();
+                    if (choice === 'txt-zip' || choice === 'zip' || choice === 'txt') {
+                        exportAllSongsAsSeparateTxtZip();
+                    } else {
+                        exportAllSongs();
+                    }
+                }
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
                     this.saveCurrentSong(true);
